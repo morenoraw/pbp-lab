@@ -1,7 +1,7 @@
 import datetime
 from django.shortcuts import render
 from wishlist.models import BarangWishlist
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.urls import reverse
 from django.core import serializers
 from django.shortcuts import redirect
@@ -21,6 +21,14 @@ def show_wishlist(request):
     'last_login': request.COOKIES['last_login']
 }
     return render(request, "wishlist.html", context)
+
+@login_required(login_url="/wishlist/login")
+def show_ajax(request: HttpRequest):
+    ctx = {
+        "nama": "Moreno Wibisana",
+        "last_login": request.COOKIES["last_login"],
+    }
+    return render(request, "wishlist_ajax.html", ctx)
 
 def generate_xml(request):
     data = BarangWishlist.objects.all()
@@ -69,6 +77,25 @@ def login_user(request):
             messages.info(request, 'Username atau Password salah!')
     context = {}
     return render(request, 'login.html', context)
+
+def new_wishlist(request: HttpRequest):
+    if request.method == "POST":
+        nama_barang = request.POST.get("nama_barang")
+        harga_barang = request.POST.get("harga_barang")
+        deskripsi = request.POST.get("deskripsi")
+
+        new_barang = BarangWishlist(
+            nama_barang=nama_barang,
+            harga_barang=harga_barang,
+            deskripsi=deskripsi,
+        )
+        new_barang.save()
+        return HttpResponse(
+            serializers.serialize("json", [new_barang]),
+            content_type="application/json",
+        )
+
+    return HttpResponse("Invalid method", status_code=405)
 
 def logout_user(request):
     logout(request)
